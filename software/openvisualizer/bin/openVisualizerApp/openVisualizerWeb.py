@@ -41,6 +41,10 @@ from openvisualizer.eventBus      import eventBusClient
 from openvisualizer.SimEngine     import SimEngine
 from openvisualizer.BspEmulator   import VcdLogger
 from openvisualizer import ovVersion
+
+here = sys.path[0]
+sys.path.insert(0, os.path.join(here, '..','..','..','..','..','coap'))
+
 from coap import coap
 import time
 
