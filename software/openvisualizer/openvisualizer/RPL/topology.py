@@ -22,13 +22,13 @@ import openvisualizer.openvisualizer_utils as u
 from openvisualizer.eventBus import eventBusClient
 
 class topology(eventBusClient.eventBusClient):
-    
+
     def __init__(self):
-        
+
         # local variables
         self.dataLock        = threading.Lock()
         self.parents         = {}
-        
+
         eventBusClient.eventBusClient.__init__(
             self,
             name                  = 'topology',
@@ -45,17 +45,17 @@ class topology(eventBusClient.eventBusClient):
                 },
             ]
         )
-    
+
     #======================== public ==========================================
-    
+
     def getParents(self,sender,signal,data):
         return self.parents
-    
+
     def getDAG(self):
         states = []
         edges = []
         motes = []
-        
+
         with self.dataLock:
             for src, dsts in self.parents.iteritems():
                 src_s = ''.join(['%02X' % x for x in src[-2:] ])
@@ -66,17 +66,47 @@ class topology(eventBusClient.eventBusClient):
                     motes.append(dst_s)
             motes = list(set(motes))
             for mote in motes:
-                d = { 'id': mote, 'value': { 'label': mote } } 
+                d = { 'id': mote, 'value': { 'label': mote } }
                 states.append(d)
-        
+
         return states, edges
-        
+
+    def getDAGForNetworkManager(self):
+        motes = []
+        edges = []
+
+        with self.dataLock:
+            for src, dsts in self.parents.iteritems():
+                it = iter(src)
+                src_s = ':'.join(["{0:02x}{1:02x}".format(x, next(it)) for x in it])
+                motes.append(src_s)
+                for dst in dsts:
+                    it = iter(dst)
+                    dst_s = ':'.join(["{0:02x}{1:02x}".format(x, next(it)) for x in it])
+                    edges.append({'u': src_s, 'v': dst_s})
+                    motes.append(dst_s)
+        motes = list(set(motes))
+
+        return motes, edges
+
+
     def updateParents(self,sender,signal,data):
         ''' inserts parent information into the parents dictionary '''
+        log.debug("Event: updateParents")
         with self.dataLock:
-            #data[0] == source address, data[1] == list of parents
-            self.parents.update({data[0]:data[1]})
-    
+            if data[0] in self.parents and self.parents[data[0]] == data[1]:
+                log.debug("No change!")
+            else:
+                #data[0] == source address, data[1] == list of parents
+                self.parents.update({data[0]:data[1]})
+                log.debug("Dispatch!")
+                motes, edges = self.getDAGForNetworkManager()
+                self.dispatch(
+                    signal='networkChanged',
+                    data=(motes, edges)
+                )
+
+
     #======================== private =========================================
-    
+
     #======================== helpers =========================================

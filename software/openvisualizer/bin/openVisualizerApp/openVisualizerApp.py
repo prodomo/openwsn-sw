@@ -29,6 +29,8 @@ from openvisualizer.RPL             import topology
 from openvisualizer                 import appdirs
 from openvisualizer.remoteConnectorServer   import remoteConnectorServer
 
+from openvisualizer.networkManager  import networkManager
+
 import openvisualizer.openvisualizer_utils as u
     
 class OpenVisualizerApp(object):
@@ -56,6 +58,9 @@ class OpenVisualizerApp(object):
         self.openLbr              = openLbr.OpenLbr()
         self.rpl                  = RPL.RPL()
         self.topology             = topology.topology()
+
+        self.networkManager       = networkManager.NetworkManager()
+
         self.udpLatency           = UDPLatency.UDPLatency()
         self.DAGrootList          = []
         # create openTun call last since indicates prefix
