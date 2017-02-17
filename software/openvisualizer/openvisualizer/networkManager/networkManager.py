@@ -46,6 +46,9 @@ class NetworkManager(eventBusClient.eventBusClient):
     def close(self):
         pass
 
+    def getSchedule(self):
+        return self.scheduleTable
+
     # ======================== private =========================================
     def _networkChanged_notif(self,sender,signal,data):
         log.info("Get network changed")

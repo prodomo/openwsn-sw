@@ -138,6 +138,9 @@ class OpenVisualizerWeb(eventBusClient.eventBusClient,Cmd):
             self.websrv.route(path='/updateroverlist/:updatemsg',         callback=self._updateRoverList)
             self.websrv.route(path='/motesdiscovery/:srcip',              callback=self._motesDiscovery)
 
+        self.websrv.route(path='/networkManager',                         callback=self._networkManagerPage)
+        self.websrv.route(path='/networkManager/schedule',                callback=self._networkManagerSchedule)
+
     @view('rovers.tmpl')
     def _showrovers(self):
         '''
@@ -461,6 +464,19 @@ class OpenVisualizerWeb(eventBusClient.eventBusClient,Cmd):
             'stats'       : self.app.eventBusMonitor.getStats(),
         }
         return response
+
+    @view('networkManager.tmpl')
+    def _networkManagerPage(self):
+       """
+            Retrieve the HTML/JS page.
+            """
+
+       return {'roverMode' : self.roverMode}
+
+    def _networkManagerSchedule(self):
+
+        return {'schedule': self.app.networkManager.getSchedule()}
+
 
     #===== callbacks
     

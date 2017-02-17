@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		%include head.tmpl
+	</head>
+	<body>
+		<script>
+		    var timeoutId;
+
+		    $(function() {
+				function updateScheduleTable(data){
+					console.log(data);
+					var tbody = $('#schedule-table-tbody').empty();
+					for(var i = 0; i<data['schedule'].length; i++){
+						var item = data['schedule'][i];
+						var tr = $('<tr></tr>');
+						for(var j=0; j<item.length; j++){
+							tr.append($('<td></td>').text(item[j]));
+						}
+						tbody.append(tr);
+					}
+
+					timeoutId = setTimeout(function() {
+						$.ajax({
+							dataType: "json",
+							url: "/networkManager/schedule",
+							success: updateScheduleTable,
+							error: errorOnAjax
+						});
+					}, 5000);
+				}
+
+				function errorOnAjax(data){
+					console.log(data);
+				}
+
+				timeoutId = setTimeout(function() {
+					$.ajax({
+						dataType: "json",
+						url: "/networkManager/schedule",
+						success: updateScheduleTable,
+						error: errorOnAjax
+					});
+				}, 100);
+		    });
+		</script>
+
+		<div id="wrapper">
+			%include navbar.tmpl ovVersion=ovVersion, roverMode=roverMode
+
+			<div id="page-wrapper">
+	            <div class="row">
+	                <div class="col-lg-12">
+	                    <h1 class="page-header">Network Manager</h1>
+	                </div>
+	            </div>
+
+	            <div class="row">
+	                <div class="col-lg-12">
+
+	                    <div class="panel panel-default">
+	                        <div class="panel-heading">
+	                            Schedule
+	                        </div>
+
+	                        <div class="panel-body">
+								<div class="row">
+									<div class="col-lg-12">
+										<div class="panel-body">
+											<h5>Slot Schedule</h5>
+											<table class="table table-striped table-bordered table-hover" id="schedule-table">
+												<thead>
+													<tr>
+														<th>Source</th>
+														<th>Destination</th>
+														<th>Slot</th>
+														<th>Channel</th>
+													</tr>
+												</thead>
+												<tbody id="schedule-table-tbody">
+												</tbody>
+										</div>
+									</div>
+								</div>
+
+	                        </div>
+	                    </div>
+
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	</body>
+</html>
