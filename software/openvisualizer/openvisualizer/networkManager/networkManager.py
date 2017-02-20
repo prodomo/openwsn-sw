@@ -36,6 +36,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         # local variables
         self.max_assignable_slot = 5
         self.start_offset = 4
+        self.max_assignable_channel = 16
         self.lastNetworkUpdateCounter = 0
         self.motes = None
         self.edges = None
@@ -71,7 +72,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         log.debug("Mote count: {0}".format(len(motes)))
         log.debug("Edge count: {0}".format(len(edges)))
         log.debug("Start algorithm")
-        results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset)
+        results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
         log.debug("End algorithm")
         log.debug("| From |  To  | Slot | Chan |")
         for item in results:
@@ -139,7 +140,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         log.debug("All Done!!#########################################")
 
 
-    def _simplestAlgorithms(self, motes, edges, max_assignable_slot, start_offset):
+    def _simplestAlgorithms(self, motes, edges, max_assignable_slot, start_offset, max_assignable_channel):
         results = []
         in_motes = {}
         for mote in motes:
