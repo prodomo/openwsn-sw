@@ -38,6 +38,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         self.start_offset = 4
         self.max_assignable_channel = 16
         self.lastNetworkUpdateCounter = 0
+        self.max_entry_per_packet = 10
         self.motes = None
         self.edges = None
         self.scheduleTable = []
@@ -79,65 +80,93 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("| {0:4} | {1:4} | {2:4} | {3:4} |".format(item[0][-4:], item[1][-4:], item[2], item[3]))
         log.debug("==============================")
         self.scheduleTable = results
-        self._sendScheduleToMote(motes)
+        self._sendScheduleTableToMote(motes)
 
-    def _sendScheduleToMote(self, motes):
+    def _sendScheduleTableToMote(self, motes):
         log.debug("Starting sending schedule. Total entry: {0}".format(len(self.scheduleTable)))
         for mote in motes:
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
-            isRoot = False
-            if mote[-2:] == '01':
-                isRoot = True
-
-            payload = list()
-            payload.append(0x11)        # reserve
-            payload.append(0x00)        # entry count. later will change it's value
+            is_root = False
+            if mote[-2:] == '01':   # TODO make it better
+                is_root = True
+            entrys = list()
 
             for schedule in self.scheduleTable:
-                type = -1
+                entry_type = -1
                 neighbor = ''
                 if schedule[0] == mote:
-                    type = 1
+                    entry_type = 0x40           # TX
                     neighbor = schedule[1]
                 elif schedule[1] == mote:
-                    type = 0
+                    entry_type = 0x00           # RX
                     neighbor = schedule[0]
 
-                if type != -1:
-                    entryCount += 1
-                    payload.append(schedule[2])  # slot offset
-                    payload.append(schedule[3])  # channel offset
-                    payload.append(type)         # type
+                if entry_type != -1:
+                    schedule_entry = list()
+                    schedule_entry.append(schedule[2])  # slot offset
+                    schedule_entry.append(schedule[3])  # channel offset
+                    schedule_entry.append(entry_type)         # type
                     # address
                     for byte in neighbor.split(':'):
-                        payload.append(int(byte[:2], 16))
-                        payload.append(int(byte[-2:], 16))
+                        schedule_entry.append(int(byte[:2], 16))
+                        schedule_entry.append(int(byte[-2:], 16))
+                    entrys.append(schedule_entry)
 
-            # set entry count
-            payload[1] = entryCount
-            payload = bytearray(payload)
-            if isRoot:
-                log.debug("GO root")
-                import socket
-                sock6 = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-                sock6.sendto(payload, ('bbbb::{0}'.format(mote), 5683))
-                # c = coap.coap()
-                # p = c.POST('coap://[bbbb::1415:92cc:0:{0}]/green'.format(moteKey), payload = payload,confirmable=False)
-                # c.close()
-                # log.debug("Root dwon")
-                #ms.triggerAction(moteState.moteState.COMMAND_SET_ADD_SCHEDULE)
-                # self.dispatch(
-                #     signal          = 'cmdToMote',
-                #     data            =  "ffff"
-                #
-            else:
-                log.debug("GO mote")
-                c = coap.coap()
-                p = c.POST('coap://[bbbb::{0}]/green'.format(mote), payload = payload)
-                c.close()
-            log.debug("====================================")
+            log.debug("{0} have {1} entry to send. [max entry per packet:{2}]".format(mote, len(entrys), self.max_entry_per_packet))
+
+            payload = list()
+            for index in xrange(0, len(entrys), self.max_entry_per_packet):
+                packet_sequence = index / self.max_entry_per_packet
+                entry_group = entrys[index: index + self.max_entry_per_packet]
+                log.debug("Sequence {0} have {1} entry".format(packet_sequence, len(entry_group)))
+
+                # if index % self.max_entry_per_packet == 0:
+                payload = list()
+                if index == 0:
+                    payload.append(0x80)    # first
+                else:
+                    payload.append(0x00)    # not first
+
+                payload.append(len(entry_group))
+                log.debug("Group Entry length: {0}".format(len(entry_group)))
+
+                for entry in entry_group:
+                    payload.extend(entry)
+
+                payload = bytearray(payload)
+                self._sendPayloadToMote(mote, payload, is_root)
+
+            log.debug("{0} done".format(mote))
+
         log.debug("All Done!!#########################################")
+
+    def _sendPayloadToMote(self, mote_address, payload, is_root):
+        if is_root:
+            log.debug("GO root")
+            # TODO
+            return
+            import socket
+            sock6 = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+            sock6.sendto(payload, ('bbbb::{0}'.format(mote_address), 5683))
+            log.debug("====================================")
+            # c = coap.coap()
+            # p = c.POST('coap://[bbbb::1415:92cc:0:{0}]/green'.format(moteKey), payload = payload,confirmable=False)
+            # c.close()
+            # log.debug("Root dwon")
+            # ms.triggerAction(moteState.moteState.COMMAND_SET_ADD_SCHEDULE)
+            # self.dispatch(
+            #     signal          = 'cmdToMote',
+            #     data            =  "ffff"
+            #
+            return
+        else:
+            log.debug("GO mote")
+            c = coap.coap()
+            p = c.POST('coap://[bbbb::{0}]/green'.format(mote_address), payload=payload)
+            c.close()
+            log.debug("====================================")
+        return
 
 
     def _simplestAlgorithms(self, motes, edges, max_assignable_slot, start_offset, max_assignable_channel):
