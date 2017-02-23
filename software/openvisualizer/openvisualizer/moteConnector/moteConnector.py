@@ -157,6 +157,17 @@ class moteConnector(eventBusClient.eventBusClient):
                 self._sendToMoteProbe(
                     dataToSend = dataToSend,
                 )
+            elif data['action']==moteState.moteState.ADD_SCHEDULE:
+                with self.stateLock:
+                    dataToSend = [
+                        OpenParser.OpenParser.SERFRAME_PC2MOTE_ADDSCHEDULE,
+                    ]
+                    dataToSend.extend(data['payload'])
+                # send data to mote
+                self._sendToMoteProbe(
+                    dataToSend=dataToSend,
+                )
+
             else:
                 raise SystemError('unexpected action={0}'.format(data['action']))
     

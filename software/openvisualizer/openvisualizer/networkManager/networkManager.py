@@ -5,6 +5,8 @@ from threading import Timer
 
 from coap import coap
 
+from openvisualizer.moteState import moteState
+
 log = logging.getLogger('networkManager')
 log.setLevel(logging.ERROR)
 log.addHandler(logging.NullHandler())
@@ -30,6 +32,11 @@ class NetworkManager(eventBusClient.eventBusClient):
                     'signal': 'networkChanged',
                     'callback': self._networkChanged_notif,
                 },
+                {
+                    'sender': self.WILDCARD,
+                    'signal': 'updateRootMoteState',
+                    'callback': self._updateRootMoteState_notif,
+                }
             ]
         )
 
@@ -42,6 +49,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         self.motes = None
         self.edges = None
         self.scheduleTable = []
+        self.dag_root_moteState = None
 
 
     # ======================== public ==========================================
@@ -144,21 +152,14 @@ class NetworkManager(eventBusClient.eventBusClient):
     def _sendPayloadToMote(self, mote_address, payload, is_root):
         if is_root:
             log.debug("GO root")
-            # TODO
-            return
-            import socket
-            sock6 = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-            sock6.sendto(payload, ('bbbb::{0}'.format(mote_address), 5683))
-            log.debug("====================================")
-            # c = coap.coap()
-            # p = c.POST('coap://[bbbb::1415:92cc:0:{0}]/green'.format(moteKey), payload = payload,confirmable=False)
-            # c.close()
-            # log.debug("Root dwon")
-            # ms.triggerAction(moteState.moteState.COMMAND_SET_ADD_SCHEDULE)
-            # self.dispatch(
-            #     signal          = 'cmdToMote',
-            #     data            =  "ffff"
-            #
+            self.dispatch(
+                signal='cmdToMote',
+                data={
+                    'serialPort': self.dag_root_moteState.moteConnector.serialport,
+                    'action': self.dag_root_moteState.ADD_SCHEDULE,
+                    'payload': payload
+                },
+            )
             return
         else:
             log.debug("GO mote")
@@ -168,6 +169,11 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("====================================")
         return
 
+    def _updateRootMoteState_notif(self, sender, signal, data):
+        log.debug("Get update root")
+        log.debug(data)
+        self.dag_root_moteState = data['rootMoteState']
+        return
 
     def _simplestAlgorithms(self, motes, edges, max_assignable_slot, start_offset, max_assignable_channel):
         results = []
