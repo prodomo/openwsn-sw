@@ -96,7 +96,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '01':   # TODO make it better
+            if mote[-2:] == '88':   # TODO make it better
                 is_root = True
             entrys = list()
 
@@ -162,10 +162,16 @@ class NetworkManager(eventBusClient.eventBusClient):
             )
             return
         else:
-            log.debug("GO mote")
-            c = coap.coap()
-            p = c.POST('coap://[bbbb::{0}]/green'.format(mote_address), payload=payload)
-            c.close()
+            try:
+
+                log.debug("GO mote")
+                c = coap.coap(udpPort=5466)
+                c.maxRetransmit = 2
+                p = c.POST('coap://[bbbb::{0}]/green'.format(mote_address), payload=payload)
+                c.close()
+            except:
+                log.error("Got Error!")
+
             log.debug("====================================")
         return
 
