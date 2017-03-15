@@ -4,6 +4,7 @@ import logging
 from threading import Timer
 
 from coap import coap
+import operator
 
 from openvisualizer.moteState import moteState
 
@@ -41,15 +42,17 @@ class NetworkManager(eventBusClient.eventBusClient):
         )
 
         # local variables
-        self.max_assignable_slot = 5
-        self.start_offset = 4
+        self.max_assignable_slot = 80
+        self.start_offset = 20
         self.max_assignable_channel = 16
         self.lastNetworkUpdateCounter = 0
-        self.max_entry_per_packet = 10
+        self.max_entry_per_packet = 3
         self.motes = None
         self.edges = None
         self.scheduleTable = []
         self.dag_root_moteState = None
+        self.schedule_back_off = 30
+        self.schedule_running = False
 
 
     # ======================== public ==========================================
@@ -67,7 +70,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         self.motes = data[0]
         self.edges = data[1]
         # wait x second for newer dao
-        timer = Timer(15, self._doCalculate, [self.lastNetworkUpdateCounter])
+        timer = Timer(self.schedule_back_off, self._doCalculate, [self.lastNetworkUpdateCounter])
         timer.start()
         log.debug("End!")
 
@@ -75,13 +78,25 @@ class NetworkManager(eventBusClient.eventBusClient):
         if self.lastNetworkUpdateCounter > args[0]:
             log.debug("[PASS] Calculate counter: {0} is older than {1}".format(args[0], self.lastNetworkUpdateCounter))
             return
+        if self.schedule_running:
+            log.debug("[DELAY] Someone is running. Wait for next time. {0}, {1}".format(args[0], self.lastNetworkUpdateCounter))
+            timer = Timer(self.schedule_back_off, self._doCalculate, [self.lastNetworkUpdateCounter])
+            timer.start()
+            return
+        self.schedule_running = True
         log.debug("Real calculate! {0}".format(args[0]))
         motes = self.motes
         edges = self.edges
         log.debug("Mote count: {0}".format(len(motes)))
         log.debug("Edge count: {0}".format(len(edges)))
         log.debug("Start algorithm")
-        results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
+        local_queue = {}
+        for mote in motes:
+            local_queue[mote] = 1
+        succeed, results = self._tasaSimpleAlgorithms(motes, local_queue, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
+        if not succeed:
+            log.critical("Scheduler cannot assign all edge!")
+        # results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
         log.debug("End algorithm")
         log.debug("| From |  To  | Slot | Chan |")
         for item in results:
@@ -89,6 +104,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         log.debug("==============================")
         self.scheduleTable = results
         self._sendScheduleTableToMote(motes)
+        self.schedule_running = False
 
     def _sendScheduleTableToMote(self, motes):
         log.debug("Starting sending schedule. Total entry: {0}".format(len(self.scheduleTable)))
@@ -96,7 +112,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '88':   # TODO make it better
+            if mote[-2:] == '01' or mote[-2:] == '88':   # TODO make it better
                 is_root = True
             entrys = list()
 
@@ -162,15 +178,20 @@ class NetworkManager(eventBusClient.eventBusClient):
             )
             return
         else:
+            c = None
             try:
 
                 log.debug("GO mote")
-                c = coap.coap(udpPort=5466)
+                c = coap.coap(udpPort=5466+self.lastNetworkUpdateCounter)
                 c.maxRetransmit = 2
                 p = c.POST('coap://[bbbb::{0}]/green'.format(mote_address), payload=payload)
                 c.close()
             except:
                 log.error("Got Error!")
+                c.close()
+                import sys
+                log.critical("Unexpected error:{0}".format(sys.exc_info()[0]))
+                log.critical("Unexpected error:{0}".format(sys.exc_info()[1]))
 
             log.debug("====================================")
         return
@@ -205,3 +226,128 @@ class NetworkManager(eventBusClient.eventBusClient):
 
         log.info("Done calculate!")
         return results
+
+    def _tasaSimpleAlgorithms(self, motes, local_q, edges, max_assignable_slot, start_offset, max_assignable_channel):
+
+        result = []
+        edge_relation = {}
+        global_q = {}
+        children = {}
+        leaf = list()
+
+        # prepare data
+        for relation in edges:
+            edge_relation[relation['u']] = relation['v']
+            global_q[relation['u']] = local_q[relation['u']]
+            children[relation['v']] = list()  # initialize children, then produce later
+
+        # get childrens
+        for child in edges:
+            if children[child['v']] != None:
+                children[child['v']].append(child['u'])
+
+        # get leafs
+        parent = children.keys()
+        for item in edges:
+            if item['u'] not in parent:
+                leaf.append(item['u'])
+        # get root
+        childTemp = edge_relation.keys()
+        parentTemp = children.keys()
+        for i in range(0, parentTemp.__len__(), 1):
+            if parentTemp[i] not in childTemp:
+                root = parentTemp[i]
+
+        # produce global queue
+        for nodes in edge_relation:
+            now = nodes
+            number = local_q[now]
+            while now != root:
+                # calculate global_q
+                if edge_relation[now] != root:
+                    global_q[edge_relation[now]] += number
+                now = edge_relation[now]
+
+        # get biggest global_q
+        sorted_x = sorted(global_q.items(), key=lambda x: (x[1], x[0]), reverse=True)
+        # print sorted_x
+
+        # prepare to schedule
+        cant_list = []  # check
+        schedule_list = []  # prepare for lq & gq calculate
+        # node_now = None
+        for slotOffset in range(start_offset, start_offset + max_assignable_slot):  # 4-
+            # if not sorted_x:#empty means all scheduled
+            # break
+            for channelOffset in range(0, max_assignable_channel, 1):  # max_assignable_channel
+                for check in sorted_x:
+                    if check[0] not in cant_list and local_q[check[0]] != 0:
+                        temp = [k for k, v in global_q.iteritems() if
+                                v == global_q[check[0]] and k not in cant_list]  # get keys by value
+                        temp.sort()
+                        if temp.__len__() == 1:
+                            node_now = temp[0]
+                        else:
+                            localTemp = []
+                            for localQ in temp:
+                                if local_q[localQ] != 0:
+                                    localTemp.append((localQ, local_q[localQ]))
+
+                            temper = sorted(sorted(localTemp, key=lambda x: x[0]), key=lambda x: x[1],
+                                            reverse=True)  # sort x[1], if same,then sort x[0]
+                            node_now = temper[0][0]
+
+                        # find node that can't schedule
+                        # child_list
+                        if node_now in children.keys():
+                            for tempCheck in children[node_now]:
+                                if tempCheck not in cant_list:
+                                    cant_list.append(tempCheck)
+                        # parent
+                        tempParent = edge_relation[node_now]
+                        if tempParent not in cant_list and tempParent != root:
+                            cant_list.append(tempParent)
+                        # parent's child_list
+                        tempChildren = edge_relation[node_now]
+                        for tempCheck in children[tempChildren]:
+                            if tempCheck not in cant_list:
+                                cant_list.append(tempCheck)
+
+                        # record sheduled information
+                        result.append([node_now, tempParent, slotOffset, channelOffset])
+                        schedule_list.append(node_now)
+
+                        break  # one cell only one, temporally
+
+            # need to calculate lq & gq, and clear  schedule_list & cant_list, and reSorted sorted_x
+            # calculate lq & gq
+            for calNode in schedule_list:
+                # local & global reduce 1 at same time
+                local_q[calNode] -= 1
+                global_q[calNode] -= 1
+                # parent's local plus 1 and global is same
+                if edge_relation[calNode] != root:
+                    calParentNode = edge_relation[calNode]
+                    local_q[calParentNode] += 1
+
+            # clear  schedule_list & cant_list
+            del cant_list[:]
+            del schedule_list[:]
+
+            # clean sorted_x and reSorted sorted_x and delete if gq = 0
+            del sorted_x[:]
+            sorted_temp = sorted(global_q.items(), key=operator.itemgetter(1), reverse=True)
+
+            for prepareIn in sorted_temp:
+                if prepareIn[1] != 0:
+                    sorted_x.append(prepareIn)
+
+            if not sorted_x:  # empty means all scheduled
+                break
+
+        if sorted_x:
+            # print "not enough"
+            return False, result
+        else:
+            # print "enough"
+            return True, result
