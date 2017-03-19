@@ -98,17 +98,22 @@ class topology(eventBusClient.eventBusClient):
     def updateParents(self,sender,signal,data):
         ''' inserts parent information into the parents dictionary '''
         log.debug("Event: updateParents")
+        change_found = False
         with self.dataLock:
             #data[0] == source address, data[1] == list of parents
-            self.parents.update({data[0]:data[1]})
+            if data[0] in self.parents and self.parents[data[0]] == data[1]:
+                # nothing
+                change_found = False
+            else:
+                change_found = True
+                self.parents.update({data[0]:data[1]})
             self.parentsLastSeen.update({data[0]: time.time()})
-        self._clearNodeTimeout()
-        if data[0] in self.parents and self.parents[data[0]] == data[1]:
+        timeout_found = self._clearNodeTimeout()
+
+        if not change_found and not timeout_found:
             log.debug("No change!")
         else:
-            # data[0] == source address, data[1] == list of parents
-            self.parents.update({data[0]: data[1]})
-            log.debug("Dispatch!")
+            log.debug("Yes change!")
             motes, edges = self.getDAGForNetworkManager()
             self.dispatch(
                 signal='networkChanged',
@@ -118,13 +123,15 @@ class topology(eventBusClient.eventBusClient):
 
     def _clearNodeTimeout(self):
         threshold = time.time() - self.NODE_TIMEOUT_THRESHOLD
+        timeout_found = False
         with self.dataLock:
             for node in self.parentsLastSeen.keys():
                 if self.parentsLastSeen[node] < threshold:
+                    timeout_found = True
                     if node in self.parents:
                         del self.parents[node]
                     del self.parentsLastSeen[node]
-
+        return timeout_found
     #======================== private =========================================
 
     #======================== helpers =========================================

@@ -62,7 +62,6 @@ class OpenVisualizerApp(object):
 
         self.networkManager       = networkManager.NetworkManager()
 
-        self.udpLatency           = UDPLatency.UDPLatency()
         self.DAGrootList          = []
         # create openTun call last since indicates prefix
         self.openTun              = openTun.create() 
