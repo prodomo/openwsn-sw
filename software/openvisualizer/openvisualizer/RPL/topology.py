@@ -132,6 +132,7 @@ class topology(eventBusClient.eventBusClient):
                         del self.parents[node]
                     del self.parentsLastSeen[node]
         return timeout_found
+
     #======================== private =========================================
 
     #======================== helpers =========================================
