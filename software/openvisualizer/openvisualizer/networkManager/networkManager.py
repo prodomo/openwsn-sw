@@ -83,27 +83,33 @@ class NetworkManager(eventBusClient.eventBusClient):
             timer = Timer(self.schedule_back_off, self._doCalculate, [self.lastNetworkUpdateCounter])
             timer.start()
             return
-        self.schedule_running = True
-        log.debug("Real calculate! {0}".format(args[0]))
-        motes = self.motes
-        edges = self.edges
-        log.debug("Mote count: {0}".format(len(motes)))
-        log.debug("Edge count: {0}".format(len(edges)))
-        log.debug("Start algorithm")
-        local_queue = {}
-        for mote in motes:
-            local_queue[mote] = 1
-        succeed, results = self._tasaSimpleAlgorithms(motes, local_queue, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
-        if not succeed:
-            log.critical("Scheduler cannot assign all edge!")
-        # results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
-        log.debug("End algorithm")
-        log.debug("| From |  To  | Slot | Chan |")
-        for item in results:
-            log.debug("| {0:4} | {1:4} | {2:4} | {3:4} |".format(item[0][-4:], item[1][-4:], item[2], item[3]))
-        log.debug("==============================")
-        self.scheduleTable = results
-        self._sendScheduleTableToMote(motes)
+        try:
+            self.schedule_running = True
+            log.debug("Real calculate! {0}".format(args[0]))
+            motes = self.motes
+            edges = self.edges
+            log.debug("Mote count: {0}".format(len(motes)))
+            log.debug("Edge count: {0}".format(len(edges)))
+            log.debug("Start algorithm")
+            local_queue = {}
+            for mote in motes:
+                local_queue[mote] = 1
+            succeed, results = self._tasaSimpleAlgorithms(motes, local_queue, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
+            if not succeed:
+                log.critical("Scheduler cannot assign all edge!")
+            # results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
+            log.debug("End algorithm")
+            log.debug("| From |  To  | Slot | Chan |")
+            for item in results:
+                log.debug("| {0:4} | {1:4} | {2:4} | {3:4} |".format(item[0][-4:], item[1][-4:], item[2], item[3]))
+            log.debug("==============================")
+            self.scheduleTable = results
+            self._sendScheduleTableToMote(motes)
+        except:
+            log.error("Got Error!")
+            import sys
+            log.critical("Unexpected error:{0}".format(sys.exc_info()[0]))
+            log.critical("Unexpected error:{0}".format(sys.exc_info()[1]))
         self.schedule_running = False
 
     def _sendScheduleTableToMote(self, motes):

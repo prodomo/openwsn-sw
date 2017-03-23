@@ -31,7 +31,7 @@ class topology(eventBusClient.eventBusClient):
         self.dataLock        = threading.Lock()
         self.parents         = {}
         self.parentsLastSeen = {}
-        self.NODE_TIMEOUT_THRESHOLD = 150
+        self.NODE_TIMEOUT_THRESHOLD = 300
 
 
         eventBusClient.eventBusClient.__init__(
@@ -132,6 +132,13 @@ class topology(eventBusClient.eventBusClient):
                         del self.parents[node]
                     del self.parentsLastSeen[node]
         return timeout_found
+
+    def recalculate(self):
+        motes, edges = self.getDAGForNetworkManager()
+        self.dispatch(
+            signal='networkChanged',
+            data=(motes, edges)
+        )
 
     #======================== private =========================================
 

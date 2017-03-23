@@ -140,6 +140,7 @@ class OpenVisualizerWeb(eventBusClient.eventBusClient,Cmd):
 
         self.websrv.route(path='/networkManager',                         callback=self._networkManagerPage)
         self.websrv.route(path='/networkManager/schedule',                callback=self._networkManagerSchedule)
+        self.websrv.route(path='/networkManager/recalculate',             callback=self._networkManagerRecalculate)
 
     @view('rovers.tmpl')
     def _showrovers(self):
@@ -482,6 +483,15 @@ class OpenVisualizerWeb(eventBusClient.eventBusClient,Cmd):
     def _networkManagerSchedule(self):
 
         return {'schedule': self.app.networkManager.getSchedule()}
+
+    def _networkManagerRecalculate(self):
+        self.app.networkManager.schedule_running = False
+        self.app.topology.recalculate()
+
+
+        return {'status': 'success'}
+
+
 
 
     #===== callbacks

@@ -257,10 +257,12 @@ class OpenLbr(eventBusClient.eventBusClient):
                 #hop by hop header present, check flags and parse    
                 if (ipv6dic['hop_flags'] & self.O_FLAG) == self.O_FLAG:
                     #error -- this packet has gone downstream somewhere.
-                    log.error("detected possible downstream link on upstream route from {0}".format(",".join(str(c) for c in ipv6dic['src_addr'])))
+                    log.error("detected possible loop on downstream route")
+                    # log.error("detected possible downstream link on upstream route from {0}".format(",".join(str(c) for c in ipv6dic['src_addr'])))
                 if (ipv6dic['hop_flags'] & self.R_FLAG) == self.R_FLAG:
                     #error -- loop in the route
-                    log.error("detected possible loop on upstream route from {0}".format(",".join(str(c) for c in ipv6dic['src_addr'])))
+                    log.error("detected possible loop on upstream route")
+                    # log.error("detected possible loop on upstream route from {0}".format(",".join(str(c) for c in ipv6dic['src_addr'])))
                 #skip the header and process the rest of the message.
                 ipv6dic['next_header'] = ipv6dic['hop_next_header']
                 
