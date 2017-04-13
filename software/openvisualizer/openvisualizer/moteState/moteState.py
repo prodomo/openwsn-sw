@@ -183,6 +183,7 @@ class StateScheduleRow(StateElem):
                                            notif.lastUsedAsn_2_3,
                                            notif.lastUsedAsn_4)
 
+
 class StateBackoff(StateElem):
     
     def update(self,notif):
@@ -256,6 +257,11 @@ class StateNeighborsRow(StateElem):
         self.data[0]['asn'].update(notif.asn_0_1,
                                    notif.asn_2_3,
                                    notif.asn_4)
+        if 'lastTx' not in self.data[0]:
+            self.data[0]['lastTx']                  = typeAsn.typeAsn()
+        self.data[0]['lastTx'].update(notif.lastTx_0_1,
+                                   notif.lastTx_2_3,
+                                   notif.lastTx_4)
         self.data[0]['f6PNORES']                 = notif.f6PNORES
 
 class StateIsSync(StateElem):
