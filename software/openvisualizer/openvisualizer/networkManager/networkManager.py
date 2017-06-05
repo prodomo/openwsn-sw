@@ -118,7 +118,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '01' or mote[-2:] == '88':   # TODO make it better
+            if mote[-2:] == '01' or mote[-2:] == 'e4':   # TODO make it better
                 is_root = True
             entrys = list()
 
