@@ -110,6 +110,12 @@ errorDescriptions = {
   61: "there are {0} cells to request mote",
   62: "the cells reserved to request mote contains slot {0} and slot {1}",
   63: "the slot {0} to be added is already in schedule",
+  77: "Start send creportasn at slot {0}, header type {1}",
+  78: "Send from {0}, {1}",
+  88: "Get header type: {0} at slot {1}",
+  89: "Get from src addr type {0}. last {1}",
+  98: "Error. slot {0}. length: {1}",
+  99: "Error. frameType {0}"
 }
 
 sixtop_returncode = {

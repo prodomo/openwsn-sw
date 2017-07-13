@@ -256,7 +256,7 @@ class OpenVisualizerWeb(eventBusClient.eventBusClient,Cmd):
         if ms:
             log.debug('Found mote {0} in moteStates'.format(moteid))
 
-            # ms.triggerAction(ms.TRIGGER_DAGROOT)
+            ms.triggerAction(ms.TRIGGER_DAGROOT)
             self.dispatch(
                 signal='updateRootMoteState',
                 data={

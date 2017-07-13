@@ -46,7 +46,7 @@ class NetworkManager(eventBusClient.eventBusClient):
         self.start_offset = 20
         self.max_assignable_channel = 16
         self.lastNetworkUpdateCounter = 0
-        self.max_entry_per_packet = 3
+        self.max_entry_per_packet = 2
         self.motes = None
         self.edges = None
         self.scheduleTable = []
@@ -118,7 +118,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '01' or mote[-2:] == '88':   # TODO make it better
+            if mote[-2:] == '01' or mote[-2:] == '88' or mote[-4:] == 'a72e':   # TODO make it better
                 is_root = True
             entrys = list()
 
