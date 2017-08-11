@@ -105,7 +105,31 @@ class ParserData(Parser.Parser):
                 pass     
         else:
             pass      
-       
+
+        creport_asn_payload_length = 22
+        if len(input) > creport_asn_payload_length: #test creportasn
+            if input[-creport_asn_payload_length] == 0x54 and input[-creport_asn_payload_length+1] == 0x66:
+                log.debug("Found creportASN!")
+                input[-creport_asn_payload_length+7] = asnbytes[0]
+                input[-creport_asn_payload_length+8] = asnbytes[1]
+                input[-creport_asn_payload_length+9] = asnbytes[2]
+                input[-creport_asn_payload_length+10] = asnbytes[3]
+                input[-creport_asn_payload_length+11] = asnbytes[4]
+
+                # udp_data = input[-creport_asn_payload_length-8:]
+                # udp_data[6] = 0x00
+                # udp_data[7] = 0x00
+                # zero = 0
+                # protocol = 0x11
+                # udp_length = udp_data[4]*256 + udp_data[5]
+                # pseudo_header = struct.pack('!BBH', zero, protocol, udp_length)
+                # pseudo_header = source + dest + pseudo_header
+                # checksum = self.checksum_func(pseudo_header + udp_data)
+                #
+                # log.error(checksum)
+                # input[-creport_asn_payload_length - 2] = checksum / 256
+                # input[-creport_asn_payload_length - 1] = checksum % 256
+
         eventType='data'
         # notify a tuple including source as one hop away nodes elide SRC address as can be inferred from MAC layer header
         return eventType, (source, input)

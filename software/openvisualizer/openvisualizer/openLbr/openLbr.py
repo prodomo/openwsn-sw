@@ -235,7 +235,7 @@ class OpenLbr(eventBusClient.eventBusClient):
             # log
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(self._format_lowpan(lowpan,lowpan_bytes))
-            
+
             #print "output:"
             #print lowpan_bytes
             # dispatch
@@ -388,6 +388,37 @@ class OpenLbr(eventBusClient.eventBusClient):
             #as source address is being retrieved from the IPHC header, the signal includes it in case
             #receiver such as RPL DAO processing needs to know the source.               
 
+            # log.error(ipv6dic['app_payload'])
+            # compute creportasn UDP checksum
+            creport_asn_payload_length = 22
+            if len(ipv6dic['app_payload']) >= creport_asn_payload_length:
+                if ipv6dic['app_payload'][-creport_asn_payload_length] == 0x54 and ipv6dic['app_payload'][-creport_asn_payload_length+1] == 0x66:
+                    all_data = list()
+
+                    # reset checksum
+                    ipv6dic['payload'][6] = 0x00
+                    ipv6dic['payload'][7] = 0x00
+
+                    # source address
+                    all_data.extend(ipv6dic['src_addr'])
+
+                    # destination address
+                    all_data.extend(ipv6dic['dst_addr'])
+
+                    # length
+                    all_data.extend(ipv6dic['udp_length'])
+
+                    # next header
+                    all_data.extend([0x00, 0x11])
+
+                    # data
+                    all_data.extend(ipv6dic['payload'])
+
+                    checksum = self.checksum_func(all_data)
+
+                    ipv6dic['payload'][6] = int(checksum/256)
+                    ipv6dic['payload'][7] = int(checksum%256)
+
             success = self._dispatchProtocol(dispatchSignal,(ipv6dic['src_addr'],ipv6dic['app_payload']))
             
             if success:
@@ -401,6 +432,23 @@ class OpenLbr(eventBusClient.eventBusClient):
         except (ValueError,IndexError,NotImplementedError) as err:
             log.error(err)
             pass
+
+    # for creportasn
+    def checksum_func(self, data):
+        checksum = 0
+        data_len = len(data)
+        if (data_len % 2) == 1:
+            data_len += 1
+            import struct
+            data += struct.pack('!B', 0)
+
+        for i in range(0, len(data), 2):
+            w = (data[i] << 8) + (data[i + 1])
+            checksum += w
+
+        checksum = (checksum >> 16) + (checksum & 0xFFFF)
+        checksum = ~checksum & 0xFFFF
+        return checksum
     
     def disassemble_ipv6(self,ipv6):
         '''
