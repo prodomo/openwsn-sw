@@ -438,9 +438,7 @@ class OpenLbr(eventBusClient.eventBusClient):
         checksum = 0
         data_len = len(data)
         if (data_len % 2) == 1:
-            data_len += 1
-            import struct
-            data += struct.pack('!B', 0)
+            data.extend([0])
 
         for i in range(0, len(data), 2):
             w = (data[i] << 8) + (data[i + 1])
