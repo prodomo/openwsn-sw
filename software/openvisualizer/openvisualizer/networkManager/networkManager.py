@@ -118,7 +118,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '01' or mote[-2:] == 'e4':   # TODO make it better
+            if mote[-2:] == '01' or mote[-2:] == '4c':   # TODO make it better
                 is_root = True
             entrys = list()
 
@@ -282,49 +282,87 @@ class NetworkManager(eventBusClient.eventBusClient):
         cant_list = []  # check
         schedule_list = []  # prepare for lq & gq calculate
         # node_now = None
-        for slotOffset in range(start_offset, start_offset + max_assignable_slot):  # 4-
+        for slotOffset in range(start_offset, start_offset + max_assignable_slot-5, 5):  # 4-
+            channelOffset=0
             # if not sorted_x:#empty means all scheduled
             # break
-            for channelOffset in range(0, max_assignable_channel, 1):  # max_assignable_channel
-                for check in sorted_x:
-                    if check[0] not in cant_list and local_q[check[0]] != 0:
-                        temp = [k for k, v in global_q.iteritems() if
-                                v == global_q[check[0]] and k not in cant_list]  # get keys by value
-                        temp.sort()
-                        if temp.__len__() == 1:
-                            node_now = temp[0]
-                        else:
-                            localTemp = []
-                            for localQ in temp:
-                                if local_q[localQ] != 0:
-                                    localTemp.append((localQ, local_q[localQ]))
+            # for channelOffset in range(0, max_assignable_channel, 1):  # max_assignable_channel
+                # for check in sorted_x:
+                #     if check[0] not in cant_list and local_q[check[0]] != 0:
+                #         temp = [k for k, v in global_q.iteritems() if
+                #                 v == global_q[check[0]] and k not in cant_list]  # get keys by value
+                #         temp.sort()
+                #         if temp.__len__() == 1:
+                #             node_now = temp[0]
+                #         else:
+                #             localTemp = []
+                #             for localQ in temp:
+                #                 if local_q[localQ] != 0:
+                #                     localTemp.append((localQ, local_q[localQ]))
 
-                            temper = sorted(sorted(localTemp, key=lambda x: x[0]), key=lambda x: x[1],
-                                            reverse=True)  # sort x[1], if same,then sort x[0]
-                            node_now = temper[0][0]
+                #             temper = sorted(sorted(localTemp, key=lambda x: x[0]), key=lambda x: x[1],
+                #                             reverse=True)  # sort x[1], if same,then sort x[0]
+                #             node_now = temper[0][0]
 
-                        # find node that can't schedule
-                        # child_list
-                        if node_now in children.keys():
-                            for tempCheck in children[node_now]:
-                                if tempCheck not in cant_list:
-                                    cant_list.append(tempCheck)
-                        # parent
-                        tempParent = edge_relation[node_now]
-                        if tempParent not in cant_list and tempParent != root:
-                            cant_list.append(tempParent)
-                        # parent's child_list
-                        tempChildren = edge_relation[node_now]
-                        for tempCheck in children[tempChildren]:
+                #         # find node that can't schedule
+                #         # child_list
+                #         if node_now in children.keys():
+                #             for tempCheck in children[node_now]:
+                #                 if tempCheck not in cant_list:
+                #                     cant_list.append(tempCheck)
+                #         # parent
+                #         tempParent = edge_relation[node_now]
+                #         if tempParent not in cant_list and tempParent != root:
+                #             cant_list.append(tempParent)
+                #         # parent's child_list
+                #         tempChildren = edge_relation[node_now]
+                #         for tempCheck in children[tempChildren]:
+                #             if tempCheck not in cant_list:
+                #                 cant_list.append(tempCheck)
+
+                #         # record sheduled information
+                #         result.append([node_now, tempParent, slotOffset, channelOffset])
+                #         schedule_list.append(node_now)
+
+                #         break  # one cell only one, temporally
+            for check in sorted_x:
+                if check[0] not in cant_list and local_q[check[0]] != 0:
+                    temp = [k for k, v in global_q.iteritems() if
+                            v == global_q[check[0]] and k not in cant_list]  # get keys by value
+                    temp.sort()
+                    if temp.__len__() == 1:
+                        node_now = temp[0]
+                    else:
+                        localTemp = []
+                        for localQ in temp:
+                            if local_q[localQ] != 0:
+                                localTemp.append((localQ, local_q[localQ]))
+
+                        temper = sorted(sorted(localTemp, key=lambda x: x[0]), key=lambda x: x[1],
+                                        reverse=True)  # sort x[1], if same,then sort x[0]
+                        node_now = temper[0][0]
+
+                    # find node that can't schedule
+                    # child_list
+                    if node_now in children.keys():
+                        for tempCheck in children[node_now]:
                             if tempCheck not in cant_list:
                                 cant_list.append(tempCheck)
+                    # parent
+                    tempParent = edge_relation[node_now]
+                    if tempParent not in cant_list and tempParent != root:
+                        cant_list.append(tempParent)
+                    # parent's child_list
+                    tempChildren = edge_relation[node_now]
+                    for tempCheck in children[tempChildren]:
+                        if tempCheck not in cant_list:
+                            cant_list.append(tempCheck)
 
-                        # record sheduled information
-                        result.append([node_now, tempParent, slotOffset, channelOffset])
-                        schedule_list.append(node_now)
+                    # record sheduled information
+                    result.append([node_now, tempParent, slotOffset, channelOffset])
+                    schedule_list.append(node_now)
 
-                        break  # one cell only one, temporally
-
+                    break  # one cell only one, temporally
             # need to calculate lq & gq, and clear  schedule_list & cant_list, and reSorted sorted_x
             # calculate lq & gq
             for calNode in schedule_list:
