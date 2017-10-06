@@ -99,6 +99,11 @@ class NetworkManager(eventBusClient.eventBusClient):
                 log.critical("Scheduler cannot assign all edge!")
             # results = self._simplestAlgorithms(motes, edges, self.max_assignable_slot, self.start_offset, self.max_assignable_channel)
             log.debug("End algorithm")
+
+            # make offset
+            for item in results:
+                item[2] = (item[2] - self.start_offset) * 3 + self.start_offset
+
             log.debug("| From |  To  | Slot | Chan |")
             for item in results:
                 log.debug("| {0:4} | {1:4} | {2:4} | {3:4} |".format(item[0][-4:], item[1][-4:], item[2], item[3]))
