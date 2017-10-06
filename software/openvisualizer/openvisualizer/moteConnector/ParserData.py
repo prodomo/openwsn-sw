@@ -106,7 +106,7 @@ class ParserData(Parser.Parser):
         else:
             pass      
 
-        creport_asn_payload_length = 22
+        creport_asn_payload_length = 23
         if len(input) > creport_asn_payload_length: #test creportasn
             if input[-creport_asn_payload_length] == 0x54 and input[-creport_asn_payload_length+1] == 0x66:
                 log.debug("Found creportASN!")
