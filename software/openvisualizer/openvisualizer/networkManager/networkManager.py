@@ -64,6 +64,8 @@ class NetworkManager(eventBusClient.eventBusClient):
 
     # ======================== private =========================================
     def _networkChanged_notif(self,sender,signal,data):
+        return
+        
         log.info("Get network changed")
         self.lastNetworkUpdateCounter += 1
         log.debug("New counter: {0}".format(self.lastNetworkUpdateCounter))
@@ -123,7 +125,7 @@ class NetworkManager(eventBusClient.eventBusClient):
             log.debug("Parsing {0}".format(mote))
             entryCount = 0
             is_root = False
-            if mote[-2:] == '01' or mote[-2:] == '88' or mote[-4:] == 'a72e':   # TODO make it better
+            if mote[-2:] == '01' or mote[-2:] == '88' or mote[-4:] == 'a55e':   # TODO make it better
                 is_root = True
             entrys = list()
 
